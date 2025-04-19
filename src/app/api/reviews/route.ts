@@ -42,11 +42,18 @@ const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 // const OPENROUTER_API_URL = process.env.OPENROUTER_URL || "https://openrouter.ai/api/v1/chat/completions";
 // const OPENROUTER_MODEL = "mistralai/mistral-7b-instruct:free";
 
+// Add cache and edge runtime config
+export const fetchCache = 'force-no-store'; // Disable the fetch cache
+export const revalidate = 3600; // Revalidate every hour
+export const runtime = 'edge'; // Use edge runtime to avoid serverless function timeouts
+
 export async function GET(request: NextRequest) {
   try {
     // Get the app ID from the URL query parameters
     const searchParams = request.nextUrl.searchParams;
     const appId = searchParams.get('appId');
+    // New parameter to control whether to skip insights generation
+    const skipInsights = searchParams.get('skipInsights') === 'true';
 
     if (!appId) {
       return NextResponse.json(
@@ -62,7 +69,10 @@ export async function GET(request: NextRequest) {
       const url = `https://playstore-api-wrapper.onrender.com/reviews?appId=${encodeURIComponent(appId)}`;
       console.log('Fetching from Play Store API wrapper:', url);
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        // Add a longer timeout for the external API request
+        signal: AbortSignal.timeout(15000) // 15 seconds timeout
+      });
       
       console.log('API response status:', response.status);
       
@@ -98,6 +108,16 @@ export async function GET(request: NextRequest) {
       };
       
       console.log('Successfully transformed reviews data');
+
+      // Skip insights generation if requested
+      if (skipInsights) {
+        return NextResponse.json({
+          appName: data.appName,
+          reviews: data.reviews,
+          insights: null,
+          insightsStatus: 'skipped'
+        });
+      }
 
       // --- Start: Generate Insights --- 
       let insights: Insights | null = null;
@@ -247,7 +267,7 @@ function generateSampleResponse(appId: string) {
 // --- Start: Insight Generation Logic (Moved from insights/route.ts) ---
 async function generateInsightsFromReviews(appName: string, reviews: Review[]): Promise<Insights> {
   // Format reviews for the prompt
-  const reviewsForAnalysis = reviews.slice(0, 500); // Limit reviews for API call
+  const reviewsForAnalysis = reviews.slice(0, 100); // Reduce limit to avoid timeouts
 
   // Calculate rating distribution
   const ratingCounts = [0, 0, 0, 0, 0];

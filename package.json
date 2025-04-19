@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --no-lint",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "vercel-build": "NEXT_PUBLIC_VERCEL_DEPLOYMENT=true next build --no-lint"
   },
   "dependencies": {
     "google-play-scraper": "^10.0.1",
