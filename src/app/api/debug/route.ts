@@ -5,6 +5,8 @@ export async function GET() {
   const hasOpenRouterKey = !!process.env.OPENROUTER_API_KEY;
   const openRouterUrl = process.env.OPENROUTER_URL || 'Default URL used';
   const playstoreApiUrl = process.env.PLAYSTORE_API_URL || 'Default URL used';
+  const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
+  const deepSeekUrl = process.env.DEEPSEEK_API_URL || 'Default URL used';
   
   // Return masked config for debugging (don't expose actual key values)
   return NextResponse.json({
@@ -15,7 +17,12 @@ export async function GET() {
         `${process.env.OPENROUTER_API_KEY!.substring(0, 4)}...${process.env.OPENROUTER_API_KEY!.slice(-4)}` : 
         'not set',
       openRouterUrl,
+      hasDeepSeekKey,
+      deepSeekKeyFirstChars: hasDeepSeekKey ? 
+        `${process.env.DEEPSEEK_API_KEY!.substring(0, 4)}...${process.env.DEEPSEEK_API_KEY!.slice(-4)}` : 
+        'not set',
+      deepSeekUrl,
       playstoreApiUrl
     }
   });
-} 
+}
