@@ -1,8 +1,33 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+# App Review Insights
+
+A web application that fetches Google Play Store reviews for apps and generates AI-powered insights based on user feedback.
+
+## Features
+
+- Fetches app reviews from Google Play Store via a custom API
+- Generates AI-powered insights using OpenRouter API (with models like Gemma 3)
+- Shows common praises, complaints, feature requests, and actionable recommendations
+- Performs sentiment analysis on reviews
+
+## APIs Used
+
+- [Play Store API Wrapper](https://playstore-api-wrapper.onrender.com/) - for fetching app reviews
+- [OpenRouter](https://openrouter.ai/) - for AI-powered insights generation
+
 ## Getting Started
 
-First, run the development server:
+First, set up your environment variables:
+
+1. Create a `.env.local` file in the project root with:
+```
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_URL=https://openrouter.ai/api/v1/chat/completions
+PLAYSTORE_API_URL=https://playstore-api-wrapper.onrender.com
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
@@ -16,9 +41,11 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Using the App
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Enter an app ID (e.g., `com.duolingo`, `com.spotify.music`) in the input field
+2. Click "Analyze Reviews" to fetch reviews and generate insights
+3. View the generated insights and review details
 
 ## Learn More
 
@@ -26,8 +53,6 @@ To learn more about Next.js, take a look at the following resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
 
