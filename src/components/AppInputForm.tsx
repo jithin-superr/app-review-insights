@@ -28,7 +28,7 @@ export default function AppInputForm({ onSubmit }: AppInputFormProps) {
         if (idParam) {
           appId = idParam;
         }
-      } catch (err) {
+      } catch (_) {
         // URL parsing failed, continue with original input
       }
     }
@@ -38,7 +38,7 @@ export default function AppInputForm({ onSubmit }: AppInputFormProps) {
     
     try {
       await onSubmit(appId);
-    } catch (err) {
+    } catch (_) {
       setError('Failed to fetch reviews. Please try again.');
     } finally {
       setIsLoading(false);

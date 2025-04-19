@@ -43,7 +43,7 @@ export default function InsightsSection({
       <div className="w-full mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">Insights will appear here</h2>
         <p className="text-gray-500">
-          Enter a Play Store app ID or URL above and click "Analyze Reviews" to generate insights.
+          Enter a Play Store app ID or URL above and click &quot;Analyze Reviews&quot; to generate insights.
         </p>
       </div>
     );

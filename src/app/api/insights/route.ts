@@ -160,7 +160,7 @@ Format your response as JSON with the following structure:
           .trim();
         const insights = JSON.parse(cleanedContent);
         return NextResponse.json({ insights });
-      } catch (err) {
+      } catch (_) {
         console.error('Failed to parse LLM response as JSON:', content);
         return NextResponse.json(
           { error: 'Failed to parse API response as JSON' },

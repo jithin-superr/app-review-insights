@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Define interfaces for the API response
+interface PlayStoreReview {
+  id?: string;
+  score?: number;
+  text?: string;
+  userName?: string;
+  date?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Get the app ID from the URL query parameters
@@ -44,7 +53,7 @@ export async function GET(request: NextRequest) {
       
       const data = {
         appName: appName,
-        reviews: apiData.reviews.map((review: any, index: number) => {
+        reviews: apiData.reviews.map((review: PlayStoreReview, index: number) => {
           return {
             id: review.id || String(index + 1),
             rating: review.score || 0,
