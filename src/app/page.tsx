@@ -81,6 +81,7 @@ export default function Home() {
   
   const generateInsights = async (appName: string, reviews: Review[]) => {
     setIsGeneratingInsights(true);
+    setError(null); // Clear any previous errors
     
     try {
       console.log('Generating insights for', appName);
@@ -98,7 +99,9 @@ export default function Home() {
       });
       
       if (!response.ok) {
-        throw new Error(`Insights API error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `HTTP Error: ${response.status}`;
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
@@ -108,7 +111,16 @@ export default function Home() {
       setInsights(data.insights);
     } catch (error) {
       console.error('Error generating insights:', error);
-      setError('Failed to generate insights. You can still view the reviews.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Set a more specific error message
+      if (errorMessage.includes('OpenRouter API key')) {
+        setError('Failed to generate AI insights: API key configuration issue. You can still view the reviews.');
+      } else if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
+        setError('AI insights generation timed out. Please try again later. You can still view the reviews.');
+      } else {
+        setError(`Failed to generate AI insights: ${errorMessage}. You can still view the reviews.`);
+      }
     } finally {
       setIsGeneratingInsights(false);
     }

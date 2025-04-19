@@ -56,6 +56,33 @@ To learn more about Next.js, take a look at the following resources:
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Follow these steps to deploy your App Review Insights application on Vercel:
+
+1. Create a Vercel account if you don't have one already
+2. Push your code to a GitHub, GitLab, or Bitbucket repository
+3. Import your repository in Vercel
+4. **Important**: Configure the following environment variables in your Vercel project settings:
+   - `OPENROUTER_API_KEY` - Your OpenRouter API key (required for AI insights generation)
+   - `OPENROUTER_URL` - OpenRouter API URL (defaults to `https://openrouter.ai/api/v1/chat/completions` if not set)
+   - `PLAYSTORE_API_URL` - Play Store API Wrapper URL (defaults to `https://playstore-api-wrapper.onrender.com` if not set)
+
+You can set these environment variables by going to:
+1. Your Vercel project
+2. Settings tab
+3. Environment Variables section
+4. Add each key-value pair
+
+**Note**: If the AI insights aren't generated but reviews are fetched correctly, this usually indicates that the `OPENROUTER_API_KEY` environment variable is not properly set on your Vercel deployment.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Troubleshooting
+
+If you encounter issues with the deployed application:
+
+1. **API Key Issues**: Make sure your OpenRouter API key is correctly configured in environment variables.
+   To check this, visit `/api/debug` on your deployed site (e.g., `https://your-app.vercel.app/api/debug`).
+
+2. **Review Fetching Works but No Insights**: This likely means the OpenRouter API key is not properly configured.
+
+3. **Rate Limits**: OpenRouter may have rate limits on free tier usage. If you're getting errors after multiple successful requests, you might be hitting rate limits.
