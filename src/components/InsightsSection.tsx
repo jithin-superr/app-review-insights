@@ -88,57 +88,6 @@ export default function InsightsSection({
         </div>
       )}
       
-      {/* Review Summary Section */}
-      <div className="mb-8 p-4 bg-white rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold mb-3">Review Summary</h3>
-        <p className="text-gray-700 mb-4">
-          {totalReviews} reviews were analyzed with an average rating of {averageRating}.
-        </p>
-        
-        {/* Rating Distribution - Simple version */}
-        <div className="mb-4">
-          <h4 className="text-md font-medium mb-2">Rating Distribution</h4>
-          <div className="flex flex-col gap-2">
-            {[5, 4, 3, 2, 1].map(rating => {
-              const count = reviews.filter(r => r.rating === rating).length;
-              const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
-              
-              return (
-                <div key={rating} className="flex items-center gap-2">
-                  <div className="text-sm font-medium w-6">{rating}★</div>
-                  <div className="flex-1 bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-blue-600 h-2.5 rounded-full" 
-                      style={{ width: `${percentage}%` }}
-                    ></div>
-                  </div>
-                  <div className="text-xs text-gray-500 w-12">{count} ({percentage}%)</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      
-      {/* Recent Reviews Section */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-3">Recent Reviews</h3>
-        <div className="space-y-4">
-          {reviews.slice(0, 3).map(review => (
-            <div key={review.id} className="p-4 bg-white rounded-lg border border-gray-200">
-              <div className="flex justify-between items-start mb-2">
-                <div className="font-medium">{review.author}</div>
-                <div className="flex items-center gap-1">
-                  <span className="text-yellow-500">{review.rating}★</span>
-                  <span className="text-xs text-gray-500">{review.date}</span>
-                </div>
-              </div>
-              <p className="text-gray-700">{review.text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      
       {/* AI Generated Insights Section */}
       <div className="mt-8">
         <div className="flex justify-between items-center mb-4">
@@ -289,4 +238,4 @@ function InsightCard({ title, items, icon }: { title: string; items: string[]; i
       </ul>
     </div>
   );
-} 
+}

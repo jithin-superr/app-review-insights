@@ -34,95 +34,63 @@ interface ReviewsData {
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+  // isGeneratingInsights is no longer needed as it's part of the main loading state
   const [appName, setAppName] = useState<string | undefined>(undefined);
   const [reviewsData, setReviewsData] = useState<ReviewsData | null>(null);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   const handleSubmit = async (appId: string) => {
     setError(null);
     setIsLoading(true);
     setInsights(null);
-    
+    setReviewsData(null); // Clear previous reviews
+    setAppName(undefined); // Clear previous app name
+
     try {
-      // Step 1: Call the API to fetch reviews
-      console.log('Fetching reviews for app ID:', appId);
-      
-      // Call our API endpoint to get the reviews
+      // Call the combined API endpoint to get reviews and insights
+      console.log('Fetching reviews and insights for app ID:', appId);
       const response = await fetch(`/api/reviews?appId=${encodeURIComponent(appId)}`);
-      
+
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      console.log('Received reviews:', data.reviews);
-      
-      // Store the reviews data
-      setReviewsData(data);
-      
-      // Extract app name from response
+      console.log('Received data:', data);
+
+      // Store app name and reviews
       const simplifiedAppName = data.appName || appId.split('.').pop() || appId;
       setAppName(simplifiedAppName.charAt(0).toUpperCase() + simplifiedAppName.slice(1));
-      
-      // Step 2: Generate insights from reviews
-      if (data.reviews && data.reviews.length > 0) {
-        await generateInsights(data.appName, data.reviews);
+      setReviewsData({ appName: data.appName, reviews: data.reviews }); // Store raw appName too
+
+      // Store insights if available
+      if (data.insights) {
+        setInsights(data.insights);
+      } else {
+        setInsights(null); // Ensure insights are null if not returned
       }
+
+      // Handle potential insight generation errors reported by the API
+      if (data.insightError) {
+        console.warn('Insight generation failed:', data.insightError);
+        // Set a specific error message, but keep the reviews visible
+        setError(data.insightError);
+      } else if (!data.insights && data.reviews && data.reviews.length > 0) {
+        // If reviews exist but insights are missing without an error, show a generic message
+        setError('AI insights could not be generated for these reviews. You can still view the reviews.');
+      }
+
     } catch (error) {
       console.error('Error in handleSubmit:', error);
       setReviewsData(null);
-      setError('Failed to fetch reviews. Please check the app ID and try again.');
+      setInsights(null);
+      setAppName(undefined);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(`Failed to fetch data: ${errorMessage}. Please check the app ID and try again.`);
     } finally {
       setIsLoading(false);
-    }
-  };
-  
-  const generateInsights = async (appName: string, reviews: Review[]) => {
-    setIsGeneratingInsights(true);
-    setError(null); // Clear any previous errors
-    
-    try {
-      console.log('Generating insights for', appName);
-      
-      // Call the insights API
-      const response = await fetch('/api/insights', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          appName,
-          reviews
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || `HTTP Error: ${response.status}`;
-        throw new Error(errorMessage);
-      }
-      
-      const data = await response.json();
-      console.log('Received insights:', data.insights);
-      
-      // Store the insights
-      setInsights(data.insights);
-    } catch (error) {
-      console.error('Error generating insights:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
-      // Set a more specific error message
-      if (errorMessage.includes('OpenRouter API key')) {
-        setError('Failed to generate AI insights: API key configuration issue. You can still view the reviews.');
-      } else if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
-        setError('AI insights generation timed out. Please try again later. You can still view the reviews.');
-      } else {
-        setError(`Failed to generate AI insights: ${errorMessage}. You can still view the reviews.`);
-      }
-    } finally {
-      setIsGeneratingInsights(false);
     }
   };
 
@@ -151,22 +119,26 @@ export default function Home() {
             )}
           </div>
           
-          {(isLoading || isGeneratingInsights) && (
+          {isLoading && (
             <div className="mt-8 flex flex-col items-center">
               <LoadingSpinner size="lg" />
               <p className="mt-4 text-gray-600">
-                {isLoading ? 'Fetching reviews...' : 'Generating insights with AI...'}
+                Fetching reviews and generating insights...
               </p>
             </div>
           )}
           
-          <InsightsSection 
-            appName={appName}
-            isLoading={isLoading}
-            isGeneratingInsights={isGeneratingInsights}
-            reviews={reviewsData?.reviews}
-            insights={insights}
-          />
+          {/* Render InsightsSection only when not loading and data is potentially available */}
+          {!isLoading && (reviewsData || insights || error) && (
+            <InsightsSection 
+              appName={appName}
+              // Pass loading states if needed by InsightsSection, otherwise remove
+              // isLoading={isLoading} 
+              // isGeneratingInsights={false} // No longer separate state
+              reviews={reviewsData?.reviews}
+              insights={insights}
+            />
+          )}
         </div>
       </main>
       
