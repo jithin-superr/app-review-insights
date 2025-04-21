@@ -7,13 +7,6 @@ const nextConfig: NextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Configure experimental features
-  experimental: {
-    serverActions: {
-      // Increase the timeout for server actions
-      bodySizeLimit: '5mb',
-    },
-  },
 };
 
 export default nextConfig;

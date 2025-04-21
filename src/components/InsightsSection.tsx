@@ -27,6 +27,15 @@ interface InsightsSectionProps {
   insights?: Insights | null;
   isLoading?: boolean;
   isGeneratingInsights?: boolean;
+  fetchDuration?: string;
+  fetchTiming?: {
+    durationMs: number;
+    durationSec: number;
+  };
+  insightsTiming?: {
+    durationMs: number;
+    durationSec: number;
+  };
 }
 
 export default function InsightsSection({ 
@@ -34,7 +43,10 @@ export default function InsightsSection({
   reviews = [], 
   insights = null,
   isLoading = false,
-  isGeneratingInsights = false
+  isGeneratingInsights = false,
+  fetchDuration,
+  fetchTiming,
+  insightsTiming
 }: InsightsSectionProps) {
   
   // If no data yet, show placeholder message
@@ -77,13 +89,36 @@ export default function InsightsSection({
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Insights for {appName}
           </h2>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="text-sm text-gray-600">
               <span className="font-semibold">{totalReviews}</span> reviews analyzed
             </div>
             <div className="text-sm text-gray-600">
               <span className="font-semibold">{averageRating}</span> average rating
             </div>
+            
+            {/* Timing badges with seconds prominently displayed */}
+            {fetchTiming && (
+              <div className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full flex items-center">
+                <span className="mr-1">⏱️</span>
+                <span className="font-medium">Reviews fetch: {fetchTiming.durationSec}s</span>
+              </div>
+            )}
+            
+            {insightsTiming && (
+              <div className="text-sm bg-green-50 text-green-700 px-3 py-1 rounded-full flex items-center">
+                <span className="mr-1">⏱️</span>
+                <span className="font-medium">Insights generation: {insightsTiming.durationSec}s</span>
+              </div>
+            )}
+            
+            {/* Fallback to old format if the new timing objects aren't available */}
+            {!fetchTiming && fetchDuration && (
+              <div className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full flex items-center">
+                <span className="mr-1">⏱️</span>
+                <span className="font-medium">{fetchDuration}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

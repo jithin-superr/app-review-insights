@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import AppInputForm from '@/components/AppInputForm';
 import InsightsSection from '@/components/InsightsSection';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -30,111 +30,175 @@ interface Insights {
 interface ReviewsData {
   appName: string;
   reviews: Review[];
-}
-
-// Helper function to add retry logic
-async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, delay = 1000) {
-  try {
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
-    }
-    return response;
-  } catch (error) {
-    if (retries <= 1) throw error;
-    console.log(`Retrying fetch to ${url}. Retries left: ${retries - 1}`);
-    await new Promise(resolve => setTimeout(resolve, delay));
-    return fetchWithRetry(url, options, retries - 1, delay * 2);
-  }
+  fetchDuration?: string;
+  fetchTiming?: {
+    durationMs: number;
+    durationSec: number;
+  };
+  insightsTiming?: {
+    durationMs: number;
+    durationSec: number;
+  };
 }
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+  // isGeneratingInsights is no longer needed as it's part of the main loading state
   const [appName, setAppName] = useState<string | undefined>(undefined);
   const [reviewsData, setReviewsData] = useState<ReviewsData | null>(null);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [appId, setAppId] = useState<string | null>(null);
 
-  // Effect to load insights after reviews are loaded
-  useEffect(() => {
-    // If we have reviews but no insights, and we're not already loading insights
-    if (reviewsData && !insights && !isGeneratingInsights && appId) {
-      loadInsights(appId);
-    }
-  }, [reviewsData, insights, isGeneratingInsights, appId]);
-
-  const loadInsights = async (appId: string) => {
-    if (!appId) return;
-    
-    setIsGeneratingInsights(true);
+  const handleSubmit = async (appId: string) => {
+    setIsLoading(true);
     setError(null);
-    
-    try {
-      console.log('Generating insights for app ID:', appId);
-      // Use retry mechanism for the potentially slow insights API
-      const response = await fetchWithRetry(
-        `/api/insights?appId=${encodeURIComponent(appId)}`, 
-        {}, // Default options
-        3,  // 3 retries
-        2000 // Initial 2-second delay, doubles each retry
-      );
+    setInsights(null);
+    setReviewsData(null); // Clear previous reviews
+    setAppName(undefined); // Clear previous app name
 
+    // Overall request timing
+    console.time('TOTAL_API_REQUEST_DURATION');
+    console.log('🔍 [DEBUG] Starting API request flow');
+
+    try {
+      // Record the time before fetch starts
+      const fetchStartTime = new Date();
+      console.log(`🔍 [DEBUG] Fetching reviews and insights for app ID: ${appId}`);
+      console.log(`🔍 [DEBUG] Request URL: /api/reviews?appId=${encodeURIComponent(appId)}`);
+      
+      // Network request preparation phase
+      console.time('NETWORK_REQUEST_PREPARATION');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+      console.timeEnd('NETWORK_REQUEST_PREPARATION');
+      
+      // Before sending the request
+      console.time('NETWORK_REQUEST_DURATION');
+      console.log('🔍 [DEBUG] Before sending API request');
+      
+      // Call the combined API endpoint to get reviews and insights
+      const response = await fetch(`/api/reviews?appId=${encodeURIComponent(appId)}`, {
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).catch(e => {
+        console.error('🔍 [DEBUG] Network error during fetch:', e);
+        throw e;
+      });
+      
+      // Clear the timeout
+      clearTimeout(timeoutId);
+      
+      // After receiving the response
+      console.timeEnd('NETWORK_REQUEST_DURATION');
+      console.log('🔍 [DEBUG] After receiving API response');
+      console.log(`🔍 [DEBUG] Response status: ${response.status}`);
+      console.log(`🔍 [DEBUG] Response headers:`, Object.fromEntries([...response.headers.entries()]));
+      
+      // Record the time after fetch completes
+      const fetchEndTime = new Date();
+      const fetchDuration = fetchEndTime.getTime() - fetchStartTime.getTime();
+      
+      // Log the network request duration
+      console.log(`🔍 [DEBUG] Network request completed in ${fetchDuration}ms`);
+      
+      if (!response.ok) {
+        console.error(`🔍 [DEBUG] Response not OK: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => {
+          console.error('🔍 [DEBUG] Failed to parse error response as JSON');
+          return {};
+        });
+        throw new Error(errorData.error || `API error: ${response.status}`);
+      }
+
+      // Before parsing response
+      console.time('RESPONSE_PARSING_DURATION');
+      console.log('🔍 [DEBUG] Before parsing response body');
+      
+      // Get the clone of response to check its size
+      const responseClone = response.clone();
+      const responseText = await responseClone.text();
+      console.log(`🔍 [DEBUG] Response payload size: ${responseText.length} characters`);
+      
+      // Parse the actual response
       const data = await response.json();
       
+      // After parsing response
+      console.timeEnd('RESPONSE_PARSING_DURATION');
+      console.log('🔍 [DEBUG] After parsing response body');
+      console.log(`🔍 [DEBUG] Parsed data has ${data.reviews?.length || 0} reviews`);
+      console.log(`🔍 [DEBUG] Response contains insights: ${data.insights ? 'Yes' : 'No'}`);
+      
+      // Format the timing information using data from the server and client
+      let timingInfo = `Client: ${(fetchDuration/1000).toFixed(2)}s`;
+      
+      // Create detailed timing info with seconds prominently displayed
+      if (data.fetchTiming) {
+        timingInfo = `Reviews: ${data.fetchTiming.durationSec}s`;
+        console.log('🔍 [DEBUG] Server reviews timing:', `${data.fetchTiming.durationSec}s (${data.fetchTiming.durationMs}ms)`);
+      }
+      
+      // Add insights timing if available
+      let insightsTimingInfo = '';
+      if (data.insightsTiming) {
+        insightsTimingInfo = `Insights: ${data.insightsTiming.durationSec}s`;
+        console.log('🔍 [DEBUG] Insights generation timing:', `${data.insightsTiming.durationSec}s (${data.insightsTiming.durationMs}ms)`);
+      }
+      
+      // Start timing state updates
+      console.time('STATE_UPDATE_DURATION');
+      console.log('🔍 [DEBUG] Before updating component state');
+      
+      // Store app name and reviews
+      const simplifiedAppName = data.appName || appId.split('.').pop() || appId;
+      setAppName(simplifiedAppName.charAt(0).toUpperCase() + simplifiedAppName.slice(1));
+      setReviewsData({ 
+        appName: data.appName, 
+        reviews: data.reviews,
+        fetchDuration: timingInfo,
+        fetchTiming: data.fetchTiming,
+        insightsTiming: data.insightsTiming
+      });
+
+      // Store insights if available
       if (data.insights) {
         setInsights(data.insights);
-      } else if (data.error) {
-        setError(`Insights generation failed: ${data.error}`);
+      } else {
+        setInsights(null); // Ensure insights are null if not returned
       }
-    } catch (error) {
-      console.error('Error generating insights:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setError(`Failed to generate insights: ${errorMessage}`);
-    } finally {
-      setIsGeneratingInsights(false);
-    }
-  };
 
-  const handleSubmit = async (appIdInput: string) => {
-    setError(null);
-    setIsLoading(true);
-    setInsights(null);
-    setReviewsData(null);
-    setAppName(undefined);
-    setAppId(appIdInput);
+      // After state updates
+      console.timeEnd('STATE_UPDATE_DURATION');
+      console.log('🔍 [DEBUG] After updating component state');
 
-    try {
-      // First, just fetch reviews without insights to avoid timeout
-      console.log('Fetching reviews for app ID:', appIdInput);
-      // Use retry mechanism for the reviews API
-      const response = await fetchWithRetry(
-        `/api/reviews?appId=${encodeURIComponent(appIdInput)}&skipInsights=true`,
-        {}, // Default options
-        3,  // 3 retries
-        2000 // Initial 2-second delay, doubles each retry
-      );
-
-      const data = await response.json();
-      console.log('Received review data:', data);
-
-      // Store app name and reviews
-      const simplifiedAppName = data.appName || appIdInput.split('.').pop() || appIdInput;
-      setAppName(simplifiedAppName.charAt(0).toUpperCase() + simplifiedAppName.slice(1));
-      setReviewsData({ appName: data.appName, reviews: data.reviews });
-
-      // Insights will be loaded by the useEffect
+      // Handle potential insight generation errors reported by the API
+      if (data.insightError) {
+        console.warn('🔍 [DEBUG] Insight generation failed:', data.insightError);
+        // Set a specific error message, but keep the reviews visible
+        setError(data.insightError);
+      } else if (!data.insights && data.reviews && data.reviews.length > 0) {
+        // If reviews exist but insights are missing without an error, show a generic message
+        console.warn('🔍 [DEBUG] Reviews present but no insights returned');
+        setError('AI insights could not be generated for these reviews. You can still view the reviews.');
+      }
 
     } catch (error) {
-      console.error('Error in handleSubmit:', error);
+      console.error('🔍 [DEBUG] Error in handleSubmit:', error);
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.error('🔍 [DEBUG] Request was aborted due to timeout');
+      }
+      if (error instanceof TypeError && error.message.includes('NetworkError')) {
+        console.error('🔍 [DEBUG] Network error - check connection or CORS issues');
+      }
       setReviewsData(null);
       setInsights(null);
       setAppName(undefined);
-      setAppId(null);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(`Failed to fetch data: ${errorMessage}. Please check the app ID and try again.`);
     } finally {
+      console.timeEnd('TOTAL_API_REQUEST_DURATION');
+      console.log('🔍 [DEBUG] API request flow completed');
       setIsLoading(false);
     }
   };
@@ -168,27 +232,22 @@ export default function Home() {
             <div className="mt-8 flex flex-col items-center">
               <LoadingSpinner size="lg" />
               <p className="mt-4 text-gray-600">
-                Fetching reviews...
+                Fetching reviews and generating insights...
               </p>
             </div>
           )}
           
-          {!isLoading && reviewsData && (
+          {/* Render InsightsSection only when not loading and data is potentially available */}
+          {!isLoading && (reviewsData || insights || error) && (
             <InsightsSection 
               appName={appName}
-              isGeneratingInsights={isGeneratingInsights}
+              // Pass loading states if needed by InsightsSection, otherwise remove
+              // isLoading={isLoading} 
+              // isGeneratingInsights={false} // No longer separate state
               reviews={reviewsData?.reviews}
               insights={insights}
+              fetchDuration={reviewsData?.fetchDuration}
             />
-          )}
-          
-          {!isLoading && isGeneratingInsights && (
-            <div className="mt-4 flex flex-col items-center">
-              <LoadingSpinner size="md" />
-              <p className="mt-2 text-gray-600">
-                Generating AI insights...
-              </p>
-            </div>
           )}
         </div>
       </main>
