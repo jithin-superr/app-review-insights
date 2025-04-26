@@ -32,6 +32,8 @@ interface ReviewsData {
   reviews: Review[];
   fetchTiming?: TimingInfo;
   insightsTiming?: TimingInfo;
+  iconUrl?: string;
+  rating?: number;
 }
 
 // Define the structure for insights
@@ -87,8 +89,8 @@ export async function GET(request: NextRequest) {
     
     // Use the custom API endpoint
     try {
-      const url = `https://playstore-api-wrapper.onrender.com/reviews?appId=${encodeURIComponent(appId)}`;
-      console.log(`🔍 [SERVER-DEBUG] Fetching from Play Store API wrapper: ${url}`);
+      const reviewsUrl = `https://playstore-api-wrapper.onrender.com/reviews?appId=${encodeURIComponent(appId)}`;
+      console.log(`🔍 [SERVER-DEBUG] Fetching from Play Store API wrapper: ${reviewsUrl}`);
       
       // Start timing the API call using console.time
       console.time('PlayStore-API-Call-Duration');
@@ -106,7 +108,7 @@ export async function GET(request: NextRequest) {
       // Before making the request
       console.log(`🔍 [SERVER-DEBUG] Before sending HTTP request to Play Store API`);
       
-      const response = await fetch(url, { 
+      const response = await fetch(reviewsUrl, { 
         signal: controller.signal,
         headers: {
           'User-Agent': 'AppReviewInsights/1.0',
@@ -161,6 +163,68 @@ export async function GET(request: NextRequest) {
       const fetchDurationSec = (fetchDuration / 1000).toFixed(2);
       console.log(`⏱️ 🔍 [SERVER-DEBUG] TIMING: Play Store API call completed in ${fetchDuration}ms (${fetchDurationSec}s) ⏱️`);
       
+      // Fetch additional app details: icon, rating, and title
+      console.time('AppDetails-Fetch-Duration');
+      console.log(`🔍 [SERVER-DEBUG] Fetching additional app details (icon, rating, and title)`);
+      
+      // Create parallel requests for icon, rating, and search (for title)
+      const apiUrl = process.env.PLAYSTORE_API_URL || 'https://playstore-api-wrapper.onrender.com';
+      const [iconResponse, ratingResponse, searchResponse] = await Promise.allSettled([
+        fetch(`${apiUrl}/icon?appId=${encodeURIComponent(appId)}`),
+        fetch(`${apiUrl}/rating?appId=${encodeURIComponent(appId)}`),
+        fetch(`${apiUrl}/search?term=${encodeURIComponent(appId)}&num=1`) // Fetch title via search
+      ]);
+      
+      // Process icon response
+      let iconUrl = null;
+      if (iconResponse.status === 'fulfilled' && iconResponse.value.ok) {
+        try {
+          const iconData = await iconResponse.value.json();
+          iconUrl = iconData.url || iconData.icon || null;
+          console.log(`🔍 [SERVER-DEBUG] Successfully fetched icon URL: ${iconUrl}`);
+        } catch (iconError) {
+          console.error(`🔍 [SERVER-DEBUG] Error parsing icon response:`, iconError);
+        }
+      } else {
+        console.warn(`🔍 [SERVER-DEBUG] Failed to fetch icon: ${iconResponse.status === 'rejected' ? iconResponse.reason : 'API returned error'}`);
+      }
+      
+      // Process rating response
+      let rating = null;
+      if (ratingResponse.status === 'fulfilled' && ratingResponse.value.ok) {
+        try {
+          const ratingData = await ratingResponse.value.json();
+          rating = ratingData.score || ratingData.rating || null;
+          console.log(`🔍 [SERVER-DEBUG] Successfully fetched rating: ${rating}`);
+        } catch (ratingError) {
+          console.error(`🔍 [SERVER-DEBUG] Error parsing rating response:`, ratingError);
+        }
+      } else {
+        console.warn(`🔍 [SERVER-DEBUG] Failed to fetch rating: ${ratingResponse.status === 'rejected' ? ratingResponse.reason : 'API returned error'}`);
+      }
+      
+      // Process search response for title
+      let fetchedAppName = null;
+      if (searchResponse.status === 'fulfilled' && searchResponse.value.ok) {
+        try {
+          const searchData = await searchResponse.value.json();
+          const matchedApp = searchData.find((app: any) => app.appId === appId);
+          if (matchedApp && matchedApp.title) {
+            fetchedAppName = matchedApp.title;
+            console.log(`🔍 [SERVER-DEBUG] Successfully fetched app name: ${fetchedAppName}`);
+          } else if (searchData.length > 0 && searchData[0].title) {
+             fetchedAppName = searchData[0].title; // Fallback to first result
+             console.log(`🔍 [SERVER-DEBUG] Using fallback app name from search: ${fetchedAppName}`);
+          }
+        } catch (searchError) {
+          console.error(`🔍 [SERVER-DEBUG] Error parsing search response for title:`, searchError);
+        }
+      } else {
+        console.warn(`🔍 [SERVER-DEBUG] Failed to fetch title via search: ${searchResponse.status === 'rejected' ? searchResponse.reason : 'API returned error'}`);
+      }
+      
+      console.timeEnd('AppDetails-Fetch-Duration');
+      
       // Before data transformation
       console.time('DATA_TRANSFORMATION');
       console.log(`🔍 [SERVER-DEBUG] Before data transformation`);
@@ -175,8 +239,9 @@ export async function GET(request: NextRequest) {
       
       console.log(`🔍 [SERVER-DEBUG] Found ${apiData.reviews?.length || 0} reviews for ${appId}`);
       
-      // Extract app name from the app ID if not available from the API
-      const appName = formatAppName(appId);
+      // Determine the final app name: prioritize fetched name, fallback to formatted ID
+      const appName = fetchedAppName || formatAppName(appId);
+      console.log(`🔍 [SERVER-DEBUG] Using final appName: ${appName}`);
       
       // Transform API response to our app's format
       if (!apiData.reviews || !Array.isArray(apiData.reviews) || apiData.reviews.length === 0) {
@@ -196,7 +261,9 @@ export async function GET(request: NextRequest) {
             date: review.date || new Date().toISOString()
           };
         }),
-        fetchTiming: apiData.fetchTiming
+        fetchTiming: apiData.fetchTiming,
+        iconUrl: iconUrl,
+        rating: rating
       };
       
       // After data transformation
@@ -258,7 +325,9 @@ export async function GET(request: NextRequest) {
         insights: insights, // Will be null if generation failed or no reviews
         ...(insightError && { insightError: insightError }), // Include error message if insights failed
         fetchTiming: data.fetchTiming,
-        ...(data.insightsTiming && { insightsTiming: data.insightsTiming })
+        ...(data.insightsTiming && { insightsTiming: data.insightsTiming }),
+        iconUrl: data.iconUrl,
+        rating: data.rating
       };
       
       // After preparing response

@@ -1,11 +1,78 @@
 @import "tailwindcss";
 
+/* Define Nagel font */
+@font-face {
+  font-family: 'Nagel';
+  src: url('/fonts/Nagel_Regular.otf') format('opentype');
+       /* Add other formats if needed */
+  font-weight: normal; /* 400 */
+  font-style: normal;
+  font-display: swap; /* Use swap for better perceived performance */
+}
+
+@font-face {
+  font-family: 'Nagel';
+  src: url('/fonts/Nagel_Medium.otf') format('opentype');
+       /* Add other formats if needed */
+  font-weight: 500; /* Medium weight */
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Nagel';
+  src: url('/fonts/Nagel_Bold.otf') format('opentype');
+       /* Add other formats if needed */
+  font-weight: bold; /* 700 */
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Add more @font-face rules for other weights/styles (e.g., italic, light) if you have them */
+
+/* Define Plus Jakarta Sans font */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/PlusJakartaSans-Regular.woff2') format('woff2');
+       /* Add other formats like woff, ttf if needed */
+  font-weight: normal; /* 400 */
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/PlusJakartaSans-Medium.woff2') format('woff2');
+       /* Add other formats if needed */
+  font-weight: 500; /* Medium weight */
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/PlusJakartaSans-Bold.woff2') format('woff2');
+       /* Add other formats like woff, ttf if needed */
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Add more @font-face rules for other weights/styles if you have them */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .dark * {
   color: inherit;
 }
   /* Dark theme styles will be applied to all elements within .dark */
 
 :root {
+  --font-nagel: 'Nagel', sans-serif; /* Add fallback */
+  --font-plus-jakarta-sans: 'Plus Jakarta Sans', sans-serif; /* Add fallback */
+  
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -122,5 +189,11 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-plus-jakarta-sans);
+  }
+  /* Apply Nagel font to all headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-nagel);
+    font-weight: normal; /* Use Regular weight (already set) */
   }
 }
